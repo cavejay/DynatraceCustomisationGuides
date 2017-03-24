@@ -12,7 +12,7 @@ These changes need to be made to the large security.web_{version}.jar in the plu
 
 ## Login Screen
 
-`\resources\css\login.css`
+`\resources\css\login.css` (For the RUM C: `\unauthorized\css\login.css`)
 
 ```css
 /*************************************************************************************/
