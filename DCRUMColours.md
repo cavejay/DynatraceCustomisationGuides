@@ -3,6 +3,14 @@
 This file outlines the files and code necessary to add colour the the DCRUM UI.
 Simply copy the code from here into the files and refresh your browser window to see the changes.
 
+### Default Colours
+- #494949
+- #3e54da
+- #309432
+- #df8722
+- #fa8072
+- #b624f9
+
 ## CAS and ADS
 
 `wwwroot/style/sass/corestyle.css`
@@ -184,5 +192,3 @@ Simply copy the code from here into the files and refresh your browser window to
     border-bottom: 2px solid darkslategray;
 }
 ```
-
-## RUM Console
