@@ -3,12 +3,11 @@
 These changes need to be made to the large security.web_{version}.jar in the plugins directory of the CSS installation.
 
 ### Default Colours
-- #3e54da
-- #309432
-- #df8722
-- #fa8072
-- #b624f9
-
+- #3e54da // Blue
+- #309432 // Green
+- #df8722 // Orange
+- #fa8072 // Salmon
+- #b624f9 // Violet
 
 ## Login Screen
 
@@ -20,7 +19,7 @@ These changes need to be made to the large security.web_{version}.jar in the plu
 
 .langbar {
     background-color: #309432;
-    box-shadow: inset 0 0 0 99999px rgba(0,0,0,0.2);
+    box-shadow: inset 0 0 0 99999px rgba(255,255,255,0.1);
 }
 
 .lang.menu-right {
@@ -30,7 +29,7 @@ These changes need to be made to the large security.web_{version}.jar in the plu
 
 ## Navbar
 
-`\resources\css\core.css`
+`\resources\css\core.css` (For the RUM C: `\css\core.css`)
 
 ```css
 div.page > div.page-menu,
@@ -46,7 +45,15 @@ div.page > div.page-menu,
 .ace-cablebox .main-menu .wijmo-wijmenu-child li.wijmo-wijmenu-item:hover > a 
 {
     background-color: #309432 !important;
-    box-shadow: inset 0 0 0 99999px rgba(0,0,0,0.2) !important;
+    box-shadow: inset 0 0 0 99999px rgba(255,255,255,0.1) !important;
     border: none  !important;
+}
+
+.wijmo-wijmenu .wijmo-wijmenu-item .wijmo-wijmenu-text:hover {
+    color: #ffffff !important;
+}
+
+.wijmo-wijmenu .wijmo-wijmenu-item .wijmo-wijmenu-text {
+	color: #e4e4e4 !important;
 }
 ```
