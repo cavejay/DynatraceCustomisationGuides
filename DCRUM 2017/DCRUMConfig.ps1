@@ -9,7 +9,19 @@
 	Assumption: that the Adlex registry key has not changed and is the most reliable way to get the install folder across versions.
 
 .EXAMPLE
+  To customise a remote CAS or ADS:
+
 	.\DCRUMConfig.ps1 -targetMachine x.x.x.x -cred $(get-credential)
+
+.EXAMPLE
+  To customise the local CAS or ADS
+
+  .\DCRUMConfig.ps1
+
+.EXAMPLE
+  To Customize the help message in the footer of the login page:
+
+  .\DCRUMConfig.ps1 -targetMachine x.x.x.x -credential $(get-credential) -customHelpLink "mailto:helpdesk@example.com" -customHelpText "Contact <TeamName>!"
 
 .NOTES
 	Author: Michael Ball
@@ -17,11 +29,10 @@
 	version: 181016
 #>
 
-[cmdletbinding()]
+[CmdletBinding()]
 PARAM (
-  [Parameter(Mandatory)][String]$targetMachine,
-  [Parameter(Mandatory)][PScredential]$credential,
-  [Switch]$SecurityOnly,
+  [Parameter()][String]$targetMachine,
+  [Parameter()][PScredential]$credential,
   [String]$LongTitleBarDefault = "Normal Length Header Text" ,
   [String]$ShortTitleBarDefault = "Short Stuff",
   [String]$SecurityClassificationDefault = "Security Classification Marking",
@@ -29,8 +40,14 @@ PARAM (
   [String]$customHelpText = "Contact us!"
 )
 
-# Create the session
-$session = New-PSSession $targetMachine -Credential $credential -ErrorAction stop
+if (!$targetMachine -and !$credential) {
+  Write-Host "No targetMachine or credential argument were provided. Script will run on the local machine"
+  $script:runLocally = $true
+}
+else {
+  # Create the session if it looks like the user wanted to work remotely
+  $script:session = New-PSSession $targetMachine -Credential $credential -ErrorAction stop
+}
 
 $remoteScriptBlock = {
   # Check that this user is an admin?
@@ -77,25 +94,33 @@ $remoteScriptBlock = {
     }
   }
 
+  # pass the result object out as a json string
   return ConvertTo-Json $output -Depth 3
 }
 
 write-host "Connecting to $targetMachine and running remote code"
-$invokeResult_ = Invoke-Command -Session $session -ScriptBlock $remoteScriptBlock
+$invokeResult_ = if ($script:runLocally) {Invoke-Command -ScriptBlock $remoteScriptBlock} else {Invoke-Command -Session $session -ScriptBlock $remoteScriptBlock}
 write-host "Ran Remote Code"
 
 # handle any errors that may have come up
 if (([String]$invokeResult_).length -le 1) {
   switch ($invokeResult_) {
-    0 { Write-Output "Changes to DCRUM configuration files require admin privileges. Please run this script as an administrator." ; break}
-    1 { Write-Output "Unable to detect any registered DCRUM components" ; break}
-    2 { Write-Output "There is not a CAS installed on this machine. This script will not be able to install the RESTfulDC Helper" ; break}
-    Default { Write-Output "Something went wrong in the remote session, return code was: '$invokeResult_'"}
+    0 { Write-Host "Changes to DCRUM configuration files require admin privileges. Please run this script as an administrator." -ForegroundColor Red ; break}
+    1 { Write-Host "Unable to detect any registered DCRUM components" -ForegroundColor Red; break}
+    2 { Write-Host "There are no DCRUM Components installed on this machine." -ForegroundColor Red ; break}
+    Default { Write-Host "Something went wrong in the remote session, return code was: '$invokeResult_'" -ForegroundColor Red}
   }
 }
 
 # convert the result from json to psobject
 $envInfo = ConvertFrom-Json $invokeResult_
+
+# If neither product could be found then inform the user and exit
+if (!$envInfo.CAS.installed -and !$envInfo.ADS.installed) {
+  write-host "Could not find either a CAS or ADS on the target machine. Please confirm you are targeting the correct server." -ForegroundColor Yellow
+  write-host "Exiting Script Now" -ForegroundColor Magenta
+  break
+}
 
 ## Determine which product should be styled
 $SelectedProductName
@@ -174,14 +199,19 @@ if ( $Selection -eq 2) {
     }
     else {
       # we've lost the back up, but we can just remove this file to force a re-bundle
-      remove-item .\bundle_Core.js
+      remove-item .\bundle_Core.js -ErrorAction SilentlyContinue
     }
 
     Pop-Location
   }
   
   Write-Output "Restored Styling from backups"  
-  $invokeResult_ = Invoke-Command -Session $session -ScriptBlock $remoteScriptBlock -ArgumentList $selectedProduct.installationDirectory
+  $invokeResult_ = if ($script:runLocally) {
+    Invoke-Command -ScriptBlock $remoteScriptBlock -ArgumentList $selectedProduct.installationDirectory
+  }
+  else {
+    Invoke-Command -Session $session -ScriptBlock $remoteScriptBlock -ArgumentList $selectedProduct.installationDirectory
+  }
 
   write-host $invokeResult_
 
@@ -323,8 +353,8 @@ $customLoginJS = "
 
 function customizeLogin () {
 	console.log('Applying custom Style customisations')
-	document.getElementById('login_support').childNodes[1].href = `"$customHelpLink`"
-  document.getElementById('login_support').childNodes[1].text = `"$customHelpText`"
+	document.getElementById('login_support').childNodes[1].href = '$customHelpLink'
+  document.getElementById('login_support').childNodes[1].text = '$customHelpText'
   document.getElementById('login_langs').remove()
 };
 
@@ -411,7 +441,12 @@ $remoteScriptBlock = {
   Write-Host "`r`nCopied script additions to $(Get-Location)\$FileName"
 }
 
-$invokeResult_ = Invoke-Command -Session $session -ScriptBlock $remoteScriptBlock -ArgumentList $SelectedProduct.installationDirectory, $customCoreSecurityHeader, $customCoreColourStyles, $customLoginJS
+$invokeResult_ = if ($script:runLocally) { 
+  Invoke-Command -ScriptBlock $remoteScriptBlock -ArgumentList $SelectedProduct.installationDirectory, $customCoreSecurityHeader, $customCoreColourStyles, $customLoginJS 
+}
+else {
+  Invoke-Command -Session $session -ScriptBlock $remoteScriptBlock -ArgumentList $SelectedProduct.installationDirectory, $customCoreSecurityHeader, $customCoreColourStyles, $customLoginJS 
+}
 Write-Host ($invokeResult_ -join "`r`n")
 
 write-host "`r`nCustomisation Complete"
